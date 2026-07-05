@@ -8,12 +8,12 @@ plugins {
 
 android {
     namespace = "com.example.nameshootingtimer"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.example.nameshootingtimer"
         minSdk = 29
-        targetSdk = 36
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -49,6 +49,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.material.icons.extended)
     
     // Navigation
     implementation(libs.androidx.navigation.compose)
@@ -71,6 +72,9 @@ dependencies {
     
     // Lottie
     implementation(libs.lottie.compose)
+    
+    // Reorderable
+    implementation(libs.reorderable)
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

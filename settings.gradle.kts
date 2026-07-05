@@ -22,6 +22,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "Name  ShootingTimer"
+rootProject.name = "ShootingTimer"
 include(":app")
  

@@ -341,14 +341,13 @@ The same behavior should work with any decorative asset.
 
 ## Asset Manager
 
-The Asset Manager is responsible for:
-
-- Loading built-in assets
-- Loading user assets
+The Asset Manager (incorporating the Resource Manager) is responsible for:
+- Loading built-in assets from APK assets
+- Loading theme assets from theme ZIPs in private storage
+- Loading user assets from the `User/` directory in private storage
 - loading Sounds
-- Loading theme assets
 - Validating imported assets
-- Providing assets to the renderer
+- Providing assets to the renderer via a unified AssetProvider interface
 
 Application code should never directly access asset files.
 

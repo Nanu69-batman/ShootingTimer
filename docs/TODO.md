@@ -12,22 +12,22 @@ Feature specifications belong in PROJECT.md, UX.md, ARCHITECTURE.md, ASSETS.md, 
 
 ## Project Setup
 
-- [ ] Create Android Studio project
-- [ ] Configure Gradle (Add Compose, Hilt, Room, Coil, Serialization)
-- [ ] Configure Git
-- [ ] Verify project builds
-- [ ] Configure Hilt (Dependency Injection)
-- [ ] Configure Room (Database)
+- [x] Create Android Studio project
+- [x] Configure Gradle (Add Compose, Hilt, Room, Coil, Serialization)
+- [x] Configure Git
+- [x] Verify project builds
+- [x] Configure Hilt (Dependency Injection)
+- [x] Configure Room (Database)
 
 ## Architecture
 
-- [ ] Configure MVVM
-- [ ] Configure Navigation
-- [ ] Configure Material 3
-- [ ] Create project package structure
-- [ ] Configure local storage
-- [ ] Create Resource Manager
-- [ ] Create Asset Manager (Foundation)
+- [x] Configure MVVM
+- [x] Configure Navigation
+- [x] Configure Material 3
+- [x] Create project package structure
+- [x] Configure local storage
+- [x] Create Resource Manager
+- [x] Create Asset Manager (Foundation)
 
 ---
 
@@ -35,23 +35,23 @@ Feature specifications belong in PROJECT.md, UX.md, ARCHITECTURE.md, ASSETS.md, 
 
 ## Current Routine
 
-- [ ] Create Current Routine
-- [ ] Edit Current Routine
-- [ ] Clear Current Routine
+- [x] Create Current Routine
+- [x] Edit Current Routine
+- [x] Clear Current Routine
 
 ## Saved Routines
 
-- [ ] Save Routine
-- [ ] Save As
-- [ ] Load Routine
+- [x] Save Routine
+- [x] Save As
+- [x] Load Routine
 - [ ] Rename Routine
-- [ ] Delete Routine
+- [x] Delete Routine
 
 ## Routine Editor
 
-- [ ] Routine Editor Screen
-- [ ] Task List
-- [ ] Drag & Drop Reordering
+- [x] Routine Editor Screen
+- [x] Task List
+- [x] Drag & Drop Reordering
 
 ---
 
@@ -59,18 +59,18 @@ Feature specifications belong in PROJECT.md, UX.md, ARCHITECTURE.md, ASSETS.md, 
 
 ## Core
 
-- [ ] Task Model
-- [ ] Task Persistence
-- [ ] Add Task
-- [ ] Edit Task
-- [ ] Delete Task
+- [x] Task Model
+- [x] Task Persistence
+- [x] Add Task
+- [x] Edit Task
+- [x] Delete Task
 
 ## Task Types
 
-- [ ] Wait Task
-- [ ] Beep Task
-- [ ] Vibrate Task
-- [ ] Play Sound Task
+- [x] Wait Task
+- [x] Beep Task
+- [x] Vibrate Task
+- [x] Play Sound Task
 
 ---
 

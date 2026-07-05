@@ -7,4 +7,10 @@
     <color name="teal_700">#FF018786</color>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Pastel Theme Colors -->
+    <color name="pastel_pink">#FFF1F1</color>
+    <color name="soft_pink">#FFC0CB</color>
+    <color name="lavender">#E6E6FA</color>
+    <color name="light_peach">#FFDAB9</color>
 </resources>

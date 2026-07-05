@@ -40,16 +40,11 @@ Imported sounds become available throughout the application.
 
 # Sound Storage
 
-Application Storage
-
+Application Private Storage
 Assets/
-
     Sounds/
-
         BuiltIn/
-
         Theme/
-
         User/
 
 The application should maintain metadata for imported sounds while preserving the original audio file.
@@ -340,12 +335,9 @@ These assets may be assigned behaviors inside the Theme Customizer.
 
 # Decorative Asset Storage
 
-Internal Storage
-
+Application Private Storage
 Decorations/
-
 Built-in/
-
 User/
 
 ---
