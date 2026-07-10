@@ -5,10 +5,8 @@ import kotlinx.coroutines.flow.Flow
 
 interface RoutineRepository {
     fun getSavedRoutines(): Flow<List<Routine>>
-    fun getCurrentRoutine(): Flow<Routine?>
-    fun getRoutineById(id: String): Flow<Routine?>
+    fun getWorkspaceRoutine(): Flow<Routine?>
     suspend fun saveRoutine(routine: Routine)
-    suspend fun updateCurrentRoutine(routine: Routine)
-    suspend fun deleteRoutine(routine: Routine)
-    suspend fun clearCurrentRoutine()
+    suspend fun deleteRoutine(routineId: String)
+    suspend fun loadRoutineToWorkspace(routineId: String)
 }

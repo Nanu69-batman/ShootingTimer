@@ -19,31 +19,21 @@ class RoutineRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getCurrentRoutine(): Flow<Routine?> {
-        return routineDao.getCurrentRoutine().map { it?.toDomainModel() }
-    }
-
-    override fun getRoutineById(id: String): Flow<Routine?> {
-        return routineDao.getRoutineById(id).map { it?.toDomainModel() }
+    override fun getWorkspaceRoutine(): Flow<Routine?> {
+        return routineDao.getWorkspaceRoutine().map { it?.toDomainModel() }
     }
 
     override suspend fun saveRoutine(routine: Routine) {
         val routineEntity = RoutineEntity.fromDomainModel(routine)
         val taskEntities = routine.tasks.map { TaskEntity.fromDomainModel(routine.id, it) }
-        routineDao.updateRoutineWithTasks(routineEntity, taskEntities)
+        routineDao.upsertRoutine(routineEntity, taskEntities)
     }
 
-    override suspend fun updateCurrentRoutine(routine: Routine) {
-        val routineEntity = RoutineEntity.fromDomainModel(routine.copy(isCurrent = true))
-        val taskEntities = routine.tasks.map { TaskEntity.fromDomainModel(routine.id, it) }
-        routineDao.updateRoutineWithTasks(routineEntity, taskEntities)
+    override suspend fun deleteRoutine(routineId: String) {
+        routineDao.deleteRoutineCompletely(routineId)
     }
 
-    override suspend fun deleteRoutine(routine: Routine) {
-        routineDao.deleteRoutine(RoutineEntity.fromDomainModel(routine))
-    }
-
-    override suspend fun clearCurrentRoutine() {
-        routineDao.clearCurrentFlag()
+    override suspend fun loadRoutineToWorkspace(routineId: String) {
+        routineDao.copyRoutine(routineId, Routine.WORKSPACE_ID)
     }
 }

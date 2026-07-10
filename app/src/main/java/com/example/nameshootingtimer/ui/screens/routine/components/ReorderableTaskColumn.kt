@@ -34,9 +34,12 @@ import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
 /**
- * ReorderableTaskColumn - High-fidelity reordering list.
- * Strategy: Transform the item's space in the list into a visual placeholder 
- * while the card content floats above it.
+ * ReorderableTaskColumn - Option 1: Native "Ghost" Transformation.
+ * 
+ * Strategy:
+ * - When an item is dragged, its visual appearance in the list REPLACES with the placeholder.
+ * - The library's internal movement logic handles the insertion index naturally.
+ * - A secondary layer renders the "floating" card content on top of the placeholder.
  */
 @Composable
 fun ReorderableTaskColumn(
@@ -47,7 +50,7 @@ fun ReorderableTaskColumn(
     val haptic = LocalHapticFeedback.current
     val listState = rememberLazyListState()
     
-    // Internal list for smooth dragging (Single Source of Truth during drag)
+    // Internal state for fluid reordering feedback
     var localList by remember(tasks) { mutableStateOf(tasks) }
     
     val reorderableState = rememberReorderableLazyListState(listState) { from, to ->
@@ -57,7 +60,7 @@ fun ReorderableTaskColumn(
         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
     }
 
-    // Persistence on settle
+    // Single-update persistence
     val isAnyItemDragging = reorderableState.isAnyItemDragging
     var wasDragging by remember { mutableStateOf(false) }
     
@@ -74,9 +77,9 @@ fun ReorderableTaskColumn(
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        itemsIndexed(localList, key = { _, task -> task.id }) { index, task ->
+        itemsIndexed(localList, key = { _, task -> task.id }) { _, task ->
             ReorderableItem(reorderableState, key = task.id) { isDragging ->
-                // Lift Animation (Premium Spring)
+                // Animated properties for the floating card
                 val liftScale by animateFloatAsState(
                     targetValue = if (isDragging) 1.04f else 1f,
                     animationSpec = spring(dampingRatio = 0.75f, stiffness = Spring.StiffnessMediumLow),
@@ -101,13 +104,13 @@ fun ReorderableTaskColumn(
                             onDragStarted = { haptic.performHapticFeedback(HapticFeedbackType.LongPress) }
                         )
                 ) {
-                    // 1. THE PLACEHOLDER LAYER
-                    // This creates the visual illusion of an empty card slot.
+                    // THE GHOST PLACEHOLDER
+                    // This is shown ONLY on the item currently occupying the target index.
                     if (isDragging) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(72.dp) // Maintain fixed height for consistency
+                                .height(72.dp)
                                 .background(
                                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
                                     shape = MaterialTheme.shapes.medium
@@ -120,7 +123,7 @@ fun ReorderableTaskColumn(
                         )
                     }
 
-                    // 2. THE LIFTED CONTENT LAYER
+                    // THE FLOATING CARD CONTENT
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -128,9 +131,14 @@ fun ReorderableTaskColumn(
                                 scaleX = liftScale
                                 scaleY = liftScale
                                 translationX = liftShiftX.toPx()
+                                // The library applies Y translation to the whole ReorderableItem.
+                                // We stay on top of the placeholder at Y=0 relative to the item container.
                             }
                             .shadow(liftElevation, MaterialTheme.shapes.medium, clip = false)
-                            .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.medium)
+                            .background(
+                                color = MaterialTheme.colorScheme.surface,
+                                shape = MaterialTheme.shapes.medium
+                            )
                     ) {
                         taskContent(task, isDragging)
                     }

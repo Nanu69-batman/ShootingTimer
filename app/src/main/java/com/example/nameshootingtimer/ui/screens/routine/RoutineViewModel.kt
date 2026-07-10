@@ -7,9 +7,11 @@ import com.example.nameshootingtimer.domain.model.Task
 import com.example.nameshootingtimer.domain.repository.RoutineRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
@@ -22,20 +24,22 @@ class RoutineViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<Routine?>(null)
     val uiState: StateFlow<Routine?> = _uiState.asStateFlow()
 
-    init {
-        loadCurrentRoutine()
-    }
+    val savedRoutines: StateFlow<List<Routine>> = repository.getSavedRoutines()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
 
-    private fun loadCurrentRoutine() {
+    private var originalRoutineId: String? = null
+
+    init {
         viewModelScope.launch {
-            repository.getCurrentRoutine().collectLatest { routine ->
+            repository.getWorkspaceRoutine().collectLatest { routine ->
                 if (routine == null) {
-                    val newRoutine = Routine(
-                        id = UUID.randomUUID().toString(),
-                        name = "Current Routine",
-                        isCurrent = true
-                    )
-                    repository.updateCurrentRoutine(newRoutine)
+                    val workspace = Routine.createWorkspace()
+                    repository.saveRoutine(workspace)
+                    _uiState.value = workspace
                 } else {
                     _uiState.value = routine
                 }
@@ -44,101 +48,110 @@ class RoutineViewModel @Inject constructor(
     }
 
     fun addTask(taskType: String) {
-        val currentRoutine = _uiState.value ?: return
-        val newOrderIndex = currentRoutine.tasks.size
+        val current = _uiState.value ?: return
+        val newOrderIndex = current.tasks.size
         val newTaskId = UUID.randomUUID().toString()
         
         val newTask = when (taskType) {
-            "Wait" -> Task.WaitTask(newTaskId, orderIndex = newOrderIndex, durationMs = 30000)
-            "Beep" -> Task.BeepTask(newTaskId, orderIndex = newOrderIndex, soundId = "default", playbackMode = Task.PlaybackMode.TIMED, durationMs = 1000)
-            "Vibrate" -> Task.VibrateTask(newTaskId, orderIndex = newOrderIndex, playbackMode = Task.PlaybackMode.TIMED, durationMs = 1000)
-            "Play Sound" -> Task.PlaySoundTask(newTaskId, orderIndex = newOrderIndex, soundId = "default", playbackMode = Task.PlaybackMode.TIMED, durationMs = 3000)
+            "Wait" -> Task.WaitTask(newTaskId, customName = "Wait", orderIndex = newOrderIndex, durationMs = 30000)
+            "Beep" -> Task.BeepTask(newTaskId, customName = "Beep", orderIndex = newOrderIndex, soundId = "default", playbackMode = Task.PlaybackMode.TIMED, durationMs = 1000)
+            "Vibrate" -> Task.VibrateTask(newTaskId, customName = "Vibrate", orderIndex = newOrderIndex, playbackMode = Task.PlaybackMode.TIMED, durationMs = 1000)
+            "Play Sound" -> Task.PlaySoundTask(newTaskId, customName = "Play Sound", orderIndex = newOrderIndex, soundId = "default", playbackMode = Task.PlaybackMode.TIMED, durationMs = 3000)
             else -> return
         }
 
-        val updatedTasks = currentRoutine.tasks + newTask
-        saveUpdatedRoutine(currentRoutine.copy(tasks = updatedTasks))
+        val updated = current.copy(tasks = current.tasks + newTask)
+        _uiState.value = updated
+        viewModelScope.launch { repository.saveRoutine(updated) }
     }
 
     fun removeTask(taskId: String) {
-        val currentRoutine = _uiState.value ?: return
-        val updatedTasks = currentRoutine.tasks.filter { it.id != taskId }
-            .mapIndexed { index, task -> 
-                when(task) {
-                    is Task.WaitTask -> task.copy(orderIndex = index)
-                    is Task.BeepTask -> task.copy(orderIndex = index)
-                    is Task.VibrateTask -> task.copy(orderIndex = index)
-                    is Task.PlaySoundTask -> task.copy(orderIndex = index)
-                }
-            }
-        saveUpdatedRoutine(currentRoutine.copy(tasks = updatedTasks))
+        val current = _uiState.value ?: return
+        val updatedTasks = current.tasks.filter { it.id != taskId }
+            .mapIndexed { index, task -> updateTaskOrder(task, index) }
+        val updated = current.copy(tasks = updatedTasks)
+        _uiState.value = updated
+        viewModelScope.launch { repository.saveRoutine(updated) }
     }
 
     fun updateTask(updatedTask: Task) {
-        val currentRoutine = _uiState.value ?: return
-        val updatedTasks = currentRoutine.tasks.map { 
+        val current = _uiState.value ?: return
+        val updatedTasks = current.tasks.map { 
             if (it.id == updatedTask.id) updatedTask else it
         }
-        saveUpdatedRoutine(currentRoutine.copy(tasks = updatedTasks))
+        val updated = current.copy(tasks = updatedTasks)
+        _uiState.value = updated
+        viewModelScope.launch { repository.saveRoutine(updated) }
     }
 
     fun finalizeReorder(finalTasks: List<Task>) {
-        val currentRoutine = _uiState.value ?: return
-        val updatedTasks = finalTasks.mapIndexed { index, task ->
-            when(task) {
-                is Task.WaitTask -> task.copy(orderIndex = index)
-                is Task.BeepTask -> task.copy(orderIndex = index)
-                is Task.VibrateTask -> task.copy(orderIndex = index)
-                is Task.PlaySoundTask -> task.copy(orderIndex = index)
-            }
-        }
-        saveUpdatedRoutine(currentRoutine.copy(tasks = updatedTasks))
+        val current = _uiState.value ?: return
+        val updatedTasks = finalTasks.mapIndexed { index, task -> updateTaskOrder(task, index) }
+        val updated = current.copy(tasks = updatedTasks)
+        _uiState.value = updated
+        viewModelScope.launch { repository.saveRoutine(updated) }
+    }
+
+    private fun updateTaskOrder(task: Task, index: Int): Task = when(task) {
+        is Task.WaitTask -> task.copy(orderIndex = index)
+        is Task.BeepTask -> task.copy(orderIndex = index)
+        is Task.VibrateTask -> task.copy(orderIndex = index)
+        is Task.PlaySoundTask -> task.copy(orderIndex = index)
     }
 
     fun clearRoutine() {
-        val currentRoutine = _uiState.value ?: return
-        saveUpdatedRoutine(currentRoutine.copy(tasks = emptyList()))
+        val current = _uiState.value ?: return
+        val updated = current.copy(tasks = emptyList())
+        _uiState.value = updated
+        viewModelScope.launch { repository.saveRoutine(updated) }
+    }
+
+    fun saveRoutine() {
+        val current = _uiState.value ?: return
+        viewModelScope.launch {
+            val targetId = originalRoutineId
+            if (targetId != null) {
+                // Generate new IDs for tasks to ensure this library entry is independent
+                val newTasks = current.tasks.map { it.withId(UUID.randomUUID().toString()) }
+                val routineToSave = current.copy(id = targetId, tasks = newTasks, isCurrent = false)
+                repository.saveRoutine(routineToSave)
+            }
+        }
     }
 
     fun saveCurrentRoutineAs(name: String) {
-        val currentRoutine = _uiState.value ?: return
+        val current = _uiState.value ?: return
         viewModelScope.launch {
-            val savedRoutine = currentRoutine.copy(
-                id = UUID.randomUUID().toString(),
-                name = name,
-                isCurrent = false,
-                createdAt = System.currentTimeMillis()
-            )
-            repository.saveRoutine(savedRoutine)
-        }
-    }
-
-    fun deleteRoutine(routine: Routine) {
-        viewModelScope.launch {
-            repository.deleteRoutine(routine)
-        }
-    }
-
-    private val _savedRoutines = MutableStateFlow<List<Routine>>(emptyList())
-    val savedRoutines: StateFlow<List<Routine>> = _savedRoutines.asStateFlow()
-
-    fun loadSavedRoutines() {
-        viewModelScope.launch {
-            repository.getSavedRoutines().collectLatest { routines ->
-                _savedRoutines.value = routines
-            }
+            val newId = UUID.randomUUID().toString()
+            // Generate new IDs for tasks to ensure this library entry is independent
+            val newTasks = current.tasks.map { it.withId(UUID.randomUUID().toString()) }
+            val newRoutine = current.copy(id = newId, name = name, tasks = newTasks, isCurrent = false)
+            repository.saveRoutine(newRoutine)
+            
+            // Switch workspace to track this new identity
+            originalRoutineId = newId
+            val updatedWorkspace = current.copy(name = name)
+            _uiState.value = updatedWorkspace
+            repository.saveRoutine(updatedWorkspace)
         }
     }
 
     fun loadRoutine(routine: Routine) {
         viewModelScope.launch {
-            repository.updateCurrentRoutine(routine.copy(isCurrent = true))
+            originalRoutineId = routine.id
+            repository.loadRoutineToWorkspace(routine.id)
         }
     }
 
-    private fun saveUpdatedRoutine(routine: Routine) {
+    fun deleteRoutine(routine: Routine) {
         viewModelScope.launch {
-            repository.updateCurrentRoutine(routine)
+            repository.deleteRoutine(routine.id)
+        }
+    }
+
+    fun renameRoutine(routine: Routine, newName: String) {
+        viewModelScope.launch {
+            repository.saveRoutine(routine.copy(name = newName))
         }
     }
 }

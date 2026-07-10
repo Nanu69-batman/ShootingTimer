@@ -7,8 +7,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,19 +33,39 @@ fun RoutineEditorScreen(
     var showAddTaskSheet by remember { mutableStateOf(false) }
     var editingTask by remember { mutableStateOf<Task?>(null) }
     var showClearConfirmation by remember { mutableStateOf(false) }
+    var showSaveAsDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(routine?.name ?: "Routine Editor") },
+                title = { 
+                    Column {
+                        Text(routine?.name ?: "Routine Editor", style = MaterialTheme.typography.titleMedium)
+                        if (routine?.name == "Current Routine") {
+                            Text("Unsaved Workspace", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                        }
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
                 actions = {
-                    TextButton(onClick = { showClearConfirmation = true }) {
-                        Text("Clear", color = MaterialTheme.colorScheme.error)
+                    IconButton(onClick = {
+                        if (routine?.name == "Current Routine") {
+                            showSaveAsDialog = true
+                        } else {
+                            viewModel.saveRoutine()
+                        }
+                    }) {
+                        Icon(Icons.Default.Save, contentDescription = "Save")
+                    }
+                    IconButton(onClick = { showSaveAsDialog = true }) {
+                        Icon(Icons.Default.ContentCopy, contentDescription = "Save As")
+                    }
+                    IconButton(onClick = { showClearConfirmation = true }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Clear", tint = MaterialTheme.colorScheme.error)
                     }
                 }
             )
@@ -92,6 +114,41 @@ fun RoutineEditorScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { showClearConfirmation = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        if (showSaveAsDialog) {
+            var name by remember { mutableStateOf("") }
+            AlertDialog(
+                onDismissRequest = { showSaveAsDialog = false },
+                title = { Text("Save Routine As") },
+                text = {
+                    OutlinedTextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("Routine Name") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            if (name.isNotBlank()) {
+                                viewModel.saveCurrentRoutineAs(name)
+                                showSaveAsDialog = false
+                            }
+                        },
+                        enabled = name.isNotBlank()
+                    ) {
+                        Text("Save")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showSaveAsDialog = false }) {
                         Text("Cancel")
                     }
                 }
@@ -157,11 +214,11 @@ fun TaskCard(
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = getTaskTitle(task),
+                    text = task.customName,
                     style = MaterialTheme.typography.titleMedium
                 )
                 Text(
-                    text = getTaskDescription(task),
+                    text = "${getTaskTypeIcon(task)} ${task.name} • ${getTaskDescription(task)}",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
@@ -186,8 +243,23 @@ fun EditTaskContent(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            text = "Edit ${getTaskTitle(task)}",
+            text = "Edit Task",
             style = MaterialTheme.typography.headlineSmall
+        )
+
+        OutlinedTextField(
+            value = currentTask.customName,
+            onValueChange = { newName ->
+                currentTask = when (val t = currentTask) {
+                    is Task.WaitTask -> t.copy(customName = newName)
+                    is Task.BeepTask -> t.copy(customName = newName)
+                    is Task.VibrateTask -> t.copy(customName = newName)
+                    is Task.PlaySoundTask -> t.copy(customName = newName)
+                }
+            },
+            label = { Text("Task Name") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
         )
 
         when (val t = currentTask) {
@@ -283,11 +355,11 @@ fun AddTaskContent(
     }
 }
 
-private fun getTaskTitle(task: Task): String = when (task) {
-    is Task.WaitTask -> "⏱ Wait"
-    is Task.BeepTask -> "🔊 Beep"
-    is Task.VibrateTask -> "📳 Vibrate"
-    is Task.PlaySoundTask -> "🎵 Play Sound"
+private fun getTaskTypeIcon(task: Task): String = when (task) {
+    is Task.WaitTask -> "⏱"
+    is Task.BeepTask -> "🔊"
+    is Task.VibrateTask -> "📳"
+    is Task.PlaySoundTask -> "🎵"
 }
 
 private fun getTaskDescription(task: Task): String = when (task) {

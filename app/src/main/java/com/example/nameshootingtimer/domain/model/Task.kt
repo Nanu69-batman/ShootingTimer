@@ -5,8 +5,11 @@ import kotlinx.serialization.Serializable
 @Serializable
 sealed class Task {
     abstract val id: String
-    abstract val name: String
+    abstract val name: String // This is the task type name (Wait, Beep, etc.)
+    abstract val customName: String // User defined heading
     abstract val orderIndex: Int
+
+    abstract fun withId(newId: String): Task
 
     @Serializable
     enum class PlaybackMode {
@@ -18,36 +21,48 @@ sealed class Task {
     data class WaitTask(
         override val id: String,
         override val name: String = "Wait",
+        override val customName: String = "Wait",
         override val orderIndex: Int,
         val durationMs: Long
-    ) : Task()
+    ) : Task() {
+        override fun withId(newId: String) = copy(id = newId)
+    }
 
     @Serializable
     data class BeepTask(
         override val id: String,
         override val name: String = "Beep",
+        override val customName: String = "Beep",
         override val orderIndex: Int,
         val soundId: String,
         val playbackMode: PlaybackMode,
         val durationMs: Long? = null // Null if MANUAL_STOP
-    ) : Task()
+    ) : Task() {
+        override fun withId(newId: String) = copy(id = newId)
+    }
 
     @Serializable
     data class VibrateTask(
         override val id: String,
         override val name: String = "Vibrate",
+        override val customName: String = "Vibrate",
         override val orderIndex: Int,
         val playbackMode: PlaybackMode,
         val durationMs: Long? = null
-    ) : Task()
+    ) : Task() {
+        override fun withId(newId: String) = copy(id = newId)
+    }
 
     @Serializable
     data class PlaySoundTask(
         override val id: String,
         override val name: String = "Play Sound",
+        override val customName: String = "Play Sound",
         override val orderIndex: Int,
         val soundId: String,
         val playbackMode: PlaybackMode,
         val durationMs: Long? = null
-    ) : Task()
+    ) : Task() {
+        override fun withId(newId: String) = copy(id = newId)
+    }
 }

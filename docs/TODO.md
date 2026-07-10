@@ -44,7 +44,7 @@ Feature specifications belong in PROJECT.md, UX.md, ARCHITECTURE.md, ASSETS.md, 
 - [x] Save Routine
 - [x] Save As
 - [x] Load Routine
-- [ ] Rename Routine
+- [x] Rename Routine
 - [x] Delete Routine
 
 ## Routine Editor

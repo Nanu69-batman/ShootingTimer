@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -93,10 +94,7 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedButton(
-                    onClick = { 
-                        viewModel.loadSavedRoutines()
-                        showSavedRoutinesSheet = true 
-                    },
+                    onClick = { showSavedRoutinesSheet = true },
                     modifier = Modifier.weight(1f)
                 ) {
                     Text("Saved Routines")
@@ -120,7 +118,10 @@ fun HomeScreen(
                         viewModel.loadRoutine(it)
                         showSavedRoutinesSheet = false
                     },
-                    onDeleteRoutine = { viewModel.deleteRoutine(it) }
+                    onDeleteRoutine = { viewModel.deleteRoutine(it) },
+                    onRenameRoutine = { routine, newName -> 
+                        viewModel.renameRoutine(routine, newName)
+                    }
                 )
             }
         }
@@ -131,8 +132,11 @@ fun HomeScreen(
 fun SavedRoutinesContent(
     routines: List<Routine>,
     onLoadRoutine: (Routine) -> Unit,
-    onDeleteRoutine: (Routine) -> Unit
+    onDeleteRoutine: (Routine) -> Unit,
+    onRenameRoutine: (Routine, String) -> Unit
 ) {
+    var renamingRoutine by remember { mutableStateOf<Routine?>(null) }
+    
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -160,7 +164,10 @@ fun SavedRoutinesContent(
                         headlineContent = { Text(routine.name) },
                         supportingContent = { Text("${routine.tasks.size} tasks") },
                         trailingContent = {
-                            Row {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(onClick = { renamingRoutine = routine }) {
+                                    Icon(Icons.Default.Edit, contentDescription = "Rename")
+                                }
                                 IconButton(onClick = { onDeleteRoutine(routine) }) {
                                     Icon(Icons.Default.Delete, contentDescription = "Delete")
                                 }
@@ -174,5 +181,40 @@ fun SavedRoutinesContent(
             }
         }
         Spacer(modifier = Modifier.height(32.dp))
+    }
+
+    if (renamingRoutine != null) {
+        var newName by remember { mutableStateOf(renamingRoutine?.name ?: "") }
+        AlertDialog(
+            onDismissRequest = { renamingRoutine = null },
+            title = { Text("Rename Routine") },
+            text = {
+                OutlinedTextField(
+                    value = newName,
+                    onValueChange = { newName = it },
+                    label = { Text("New Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (newName.isNotBlank()) {
+                            onRenameRoutine(renamingRoutine!!, newName)
+                            renamingRoutine = null
+                        }
+                    },
+                    enabled = newName.isNotBlank()
+                ) {
+                    Text("Rename")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { renamingRoutine = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }
