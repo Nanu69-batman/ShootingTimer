@@ -6,6 +6,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.nameshootingtimer.ui.screens.home.HomeScreen
 import com.example.nameshootingtimer.ui.screens.routine.RoutineEditorScreen
+import com.example.nameshootingtimer.ui.screens.execution.ExecutionScreen
 
 @Composable
 fun ShootingTimerNavGraph() {
@@ -19,11 +20,17 @@ fun ShootingTimerNavGraph() {
             HomeScreen(
                 onNavigateToEditor = { navController.navigate("editor") },
                 onNavigateToGallery = { /* TODO */ },
-                onNavigateToSettings = { /* TODO */ }
+                onNavigateToSettings = { /* TODO */ },
+                onNavigateToExecution = { navController.navigate("execution") }
             )
         }
         composable("editor") {
             RoutineEditorScreen(
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+        composable("execution") {
+            ExecutionScreen(
                 onNavigateBack = { navController.popBackStack() }
             )
         }

@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.nameshootingtimer.domain.model.Routine
 import com.example.nameshootingtimer.ui.screens.routine.RoutineViewModel
+import com.example.nameshootingtimer.ui.screens.execution.ExecutionViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -23,7 +24,9 @@ fun HomeScreen(
     onNavigateToEditor: () -> Unit,
     onNavigateToGallery: () -> Unit,
     onNavigateToSettings: () -> Unit,
-    viewModel: RoutineViewModel = hiltViewModel()
+    onNavigateToExecution: () -> Unit,
+    viewModel: RoutineViewModel = hiltViewModel(),
+    executionViewModel: ExecutionViewModel = hiltViewModel()
 ) {
     val routine by viewModel.uiState.collectAsState()
     val savedRoutines by viewModel.savedRoutines.collectAsState()
@@ -78,11 +81,17 @@ fun HomeScreen(
 
             // Start Button
             Button(
-                onClick = { /* TODO: Start execution */ },
+                onClick = { 
+                    routine?.let {
+                        executionViewModel.start(it)
+                        onNavigateToExecution()
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(64.dp),
-                shape = MaterialTheme.shapes.extraLarge
+                shape = MaterialTheme.shapes.extraLarge,
+                enabled = routine != null && routine!!.tasks.isNotEmpty()
             ) {
                 Icon(Icons.Default.PlayArrow, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))

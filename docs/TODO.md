@@ -78,22 +78,22 @@ Feature specifications belong in PROJECT.md, UX.md, ARCHITECTURE.md, ASSETS.md, 
 
 ## Execution Engine
 
-- [ ] Execution Engine
-- [ ] Start Routine
-- [ ] Pause Routine
-- [ ] Resume Routine
-- [ ] Stop Routine
+- [x] Execution Engine
+- [x] Start Routine
+- [x] Pause Routine
+- [x] Resume Routine
+- [x] Stop Routine
 
 ## Execution Modes
 
-- [ ] Single Run
+- [x] Single Run
 - [ ] Repeat X Times
 - [ ] Infinite Loop
 
 ## Manual Stop
 
-- [ ] Manual Stop Screen
-- [ ] Continue Execution
+- [x] Manual Stop Screen
+- [x] Continue Execution
 
 ---
 
