@@ -24,14 +24,18 @@ class RoutineViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<Routine?>(null)
     val uiState: StateFlow<Routine?> = _uiState.asStateFlow()
 
+    private val _isModified = MutableStateFlow(false)
+    val isModified: StateFlow<Boolean> = _isModified.asStateFlow()
+
+    private val _lastSyncedName = MutableStateFlow<String?>(null)
+    val lastSyncedName: StateFlow<String?> = _lastSyncedName.asStateFlow()
+
     val savedRoutines: StateFlow<List<Routine>> = repository.getSavedRoutines()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = emptyList()
         )
-
-    private var originalRoutineId: String? = null
 
     init {
         viewModelScope.launch {
@@ -42,9 +46,19 @@ class RoutineViewModel @Inject constructor(
                     _uiState.value = workspace
                 } else {
                     _uiState.value = routine
+                    // When first opening, we don't necessarily know if it's "synced" with a library entry
+                    // but we can check if a name matches to set initial state
+                    val currentName = routine.name
+                    if (savedRoutines.value.any { it.name.equals(currentName, ignoreCase = true) }) {
+                         _lastSyncedName.value = currentName
+                    }
                 }
             }
         }
+    }
+
+    private fun markAsModified() {
+        _isModified.value = true
     }
 
     fun addTask(taskType: String) {
@@ -62,6 +76,7 @@ class RoutineViewModel @Inject constructor(
 
         val updated = current.copy(tasks = current.tasks + newTask)
         _uiState.value = updated
+        markAsModified()
         viewModelScope.launch { repository.saveRoutine(updated) }
     }
 
@@ -71,6 +86,7 @@ class RoutineViewModel @Inject constructor(
             .mapIndexed { index, task -> updateTaskOrder(task, index) }
         val updated = current.copy(tasks = updatedTasks)
         _uiState.value = updated
+        markAsModified()
         viewModelScope.launch { repository.saveRoutine(updated) }
     }
 
@@ -81,6 +97,7 @@ class RoutineViewModel @Inject constructor(
         }
         val updated = current.copy(tasks = updatedTasks)
         _uiState.value = updated
+        markAsModified()
         viewModelScope.launch { repository.saveRoutine(updated) }
     }
 
@@ -89,6 +106,7 @@ class RoutineViewModel @Inject constructor(
         val updatedTasks = finalTasks.mapIndexed { index, task -> updateTaskOrder(task, index) }
         val updated = current.copy(tasks = updatedTasks)
         _uiState.value = updated
+        markAsModified()
         viewModelScope.launch { repository.saveRoutine(updated) }
     }
 
@@ -103,18 +121,38 @@ class RoutineViewModel @Inject constructor(
         val current = _uiState.value ?: return
         val updated = current.copy(tasks = emptyList())
         _uiState.value = updated
+        markAsModified()
         viewModelScope.launch { repository.saveRoutine(updated) }
+    }
+
+    fun createNewRoutine() {
+        val newRoutine = Routine(
+            id = Routine.WORKSPACE_ID,
+            name = "New Routine",
+            tasks = emptyList(),
+            isCurrent = true
+        )
+        _uiState.value = newRoutine
+        _isModified.value = false
+        _lastSyncedName.value = null
+        viewModelScope.launch { repository.saveRoutine(newRoutine) }
+    }
+
+    fun checkNameConflict(name: String): Boolean {
+        return savedRoutines.value.any { it.name.equals(name, ignoreCase = true) }
     }
 
     fun saveRoutine() {
         val current = _uiState.value ?: return
-        viewModelScope.launch {
-            val targetId = originalRoutineId
-            if (targetId != null) {
-                // Generate new IDs for tasks to ensure this library entry is independent
+        val existingMatch = savedRoutines.value.find { it.name.equals(current.name, ignoreCase = true) }
+        
+        if (existingMatch != null) {
+            viewModelScope.launch {
                 val newTasks = current.tasks.map { it.withId(UUID.randomUUID().toString()) }
-                val routineToSave = current.copy(id = targetId, tasks = newTasks, isCurrent = false)
+                val routineToSave = current.copy(id = existingMatch.id, tasks = newTasks, isCurrent = false)
                 repository.saveRoutine(routineToSave)
+                _isModified.value = false
+                _lastSyncedName.value = current.name
             }
         }
     }
@@ -122,29 +160,34 @@ class RoutineViewModel @Inject constructor(
     fun saveCurrentRoutineAs(name: String) {
         val current = _uiState.value ?: return
         viewModelScope.launch {
-            val newId = UUID.randomUUID().toString()
-            // Generate new IDs for tasks to ensure this library entry is independent
+            val existingMatch = savedRoutines.value.find { it.name.equals(name, ignoreCase = true) }
+            val targetId = existingMatch?.id ?: UUID.randomUUID().toString()
+            
             val newTasks = current.tasks.map { it.withId(UUID.randomUUID().toString()) }
-            val newRoutine = current.copy(id = newId, name = name, tasks = newTasks, isCurrent = false)
+            val newRoutine = current.copy(id = targetId, name = name, tasks = newTasks, isCurrent = false)
             repository.saveRoutine(newRoutine)
             
-            // Switch workspace to track this new identity
-            originalRoutineId = newId
             val updatedWorkspace = current.copy(name = name)
             _uiState.value = updatedWorkspace
+            _isModified.value = false
+            _lastSyncedName.value = name
             repository.saveRoutine(updatedWorkspace)
         }
     }
 
     fun loadRoutine(routine: Routine) {
         viewModelScope.launch {
-            originalRoutineId = routine.id
             repository.loadRoutineToWorkspace(routine.id)
+            _isModified.value = false
+            _lastSyncedName.value = routine.name
         }
     }
 
     fun deleteRoutine(routine: Routine) {
         viewModelScope.launch {
+            if (_lastSyncedName.value == routine.name) {
+                _lastSyncedName.value = null
+            }
             repository.deleteRoutine(routine.id)
         }
     }

@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.NoteAdd
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -30,10 +31,27 @@ fun RoutineEditorScreen(
     viewModel: RoutineViewModel = hiltViewModel()
 ) {
     val routine by viewModel.uiState.collectAsState()
+    val savedRoutines by viewModel.savedRoutines.collectAsState()
+    val isModified by viewModel.isModified.collectAsState()
+    val lastSyncedName by viewModel.lastSyncedName.collectAsState()
+    
+    val currentNameExistsInLibrary = remember(routine, savedRoutines) {
+        val currentName = routine?.name ?: ""
+        savedRoutines.any { it.name.equals(currentName, ignoreCase = true) }
+    }
+
+    // Synced means it exists in library, matches the tracked sync name, and hasn't been modified
+    val isSynced = currentNameExistsInLibrary && 
+                   routine?.name.equals(lastSyncedName, ignoreCase = true) && 
+                   !isModified
+
     var showAddTaskSheet by remember { mutableStateOf(false) }
     var editingTask by remember { mutableStateOf<Task?>(null) }
     var showClearConfirmation by remember { mutableStateOf(false) }
+    var showNewRoutineConfirmation by remember { mutableStateOf(false) }
     var showSaveAsDialog by remember { mutableStateOf(false) }
+    var pendingSaveAsName by remember { mutableStateOf<String?>(null) }
+    var showOverwriteWarning by remember { mutableStateOf<String?>(null) } 
 
     Scaffold(
         topBar = {
@@ -41,8 +59,10 @@ fun RoutineEditorScreen(
                 title = { 
                     Column {
                         Text(routine?.name ?: "Routine Editor", style = MaterialTheme.typography.titleMedium)
-                        if (routine?.name == "Current Routine") {
+                        if (!isSynced) {
                             Text("Unsaved Workspace", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.secondary)
+                        } else {
+                            Text("Synced with Library", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
                         }
                     }
                 },
@@ -52,11 +72,22 @@ fun RoutineEditorScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = { showNewRoutineConfirmation = true }) {
+                        Icon(Icons.Default.NoteAdd, contentDescription = "New Routine")
+                    }
                     IconButton(onClick = {
-                        if (routine?.name == "Current Routine") {
-                            showSaveAsDialog = true
-                        } else {
+                        val currentName = routine?.name ?: ""
+                        if (currentName.equals(lastSyncedName, ignoreCase = true)) {
+                            // This is a direct update to the routine we are currently synced with
+                            // Silent update as requested
                             viewModel.saveRoutine()
+                        } else if (currentNameExistsInLibrary) {
+                            // Current name is different from sync name but exists elsewhere in library
+                            // This is an overwrite scenario
+                            showOverwriteWarning = currentName
+                        } else {
+                            // New name entirely
+                            showSaveAsDialog = true
                         }
                     }) {
                         Icon(Icons.Default.Save, contentDescription = "Save")
@@ -65,7 +96,7 @@ fun RoutineEditorScreen(
                         Icon(Icons.Default.ContentCopy, contentDescription = "Save As")
                     }
                     IconButton(onClick = { showClearConfirmation = true }) {
-                        Icon(Icons.Default.Delete, contentDescription = "Clear", tint = MaterialTheme.colorScheme.error)
+                        Icon(Icons.Default.Delete, contentDescription = "Clear Tasks", tint = MaterialTheme.colorScheme.error)
                     }
                 }
             )
@@ -100,7 +131,7 @@ fun RoutineEditorScreen(
         if (showClearConfirmation) {
             AlertDialog(
                 onDismissRequest = { showClearConfirmation = false },
-                title = { Text("Clear Routine?") },
+                title = { Text("Clear Tasks?") },
                 text = { Text("This will remove all tasks from the current routine.") },
                 confirmButton = {
                     TextButton(
@@ -114,6 +145,29 @@ fun RoutineEditorScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { showClearConfirmation = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        if (showNewRoutineConfirmation) {
+            AlertDialog(
+                onDismissRequest = { showNewRoutineConfirmation = false },
+                title = { Text("New Routine?") },
+                text = { Text("This will clear the workspace and start a new routine named 'New Routine'.") },
+                confirmButton = {
+                    TextButton(
+                        onClick = {
+                            viewModel.createNewRoutine()
+                            showNewRoutineConfirmation = false
+                        }
+                    ) {
+                        Text("Create")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showNewRoutineConfirmation = false }) {
                         Text("Cancel")
                     }
                 }
@@ -138,8 +192,14 @@ fun RoutineEditorScreen(
                     Button(
                         onClick = {
                             if (name.isNotBlank()) {
-                                viewModel.saveCurrentRoutineAs(name)
-                                showSaveAsDialog = false
+                                if (viewModel.checkNameConflict(name)) {
+                                    pendingSaveAsName = name
+                                    showOverwriteWarning = name
+                                    showSaveAsDialog = false
+                                } else {
+                                    viewModel.saveCurrentRoutineAs(name)
+                                    showSaveAsDialog = false
+                                }
                             }
                         },
                         enabled = name.isNotBlank()
@@ -149,6 +209,44 @@ fun RoutineEditorScreen(
                 },
                 dismissButton = {
                     TextButton(onClick = { showSaveAsDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
+        if (showOverwriteWarning != null) {
+            AlertDialog(
+                onDismissRequest = { 
+                    showOverwriteWarning = null
+                    pendingSaveAsName = null
+                },
+                title = { Text("Overwrite Routine?") },
+                text = { Text("A routine named '${showOverwriteWarning}' already exists. Do you want to overwrite it?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val nameToSave = pendingSaveAsName
+                            if (nameToSave != null) {
+                                viewModel.saveCurrentRoutineAs(nameToSave)
+                            } else {
+                                viewModel.saveRoutine()
+                            }
+                            showOverwriteWarning = null
+                            pendingSaveAsName = null
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text("Overwrite")
+                    }
+                },
+                dismissButton = {
+                    TextButton(
+                        onClick = { 
+                            showOverwriteWarning = null
+                            pendingSaveAsName = null
+                        }
+                    ) {
                         Text("Cancel")
                     }
                 }
