@@ -116,11 +116,13 @@ fun ManualStopScreen(
             Button(
                 onClick = onStop,
                 modifier = Modifier
-                    .fillMaxSize(0.8f),
+                    .padding(32.dp)
+                    .fillMaxSize()
+                    .aspectRatio(1f),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.error
                 ),
-                shape = MaterialTheme.shapes.extraLarge
+                shape = androidx.compose.foundation.shape.CircleShape
             ) {
                 Text(
                     "STOP",

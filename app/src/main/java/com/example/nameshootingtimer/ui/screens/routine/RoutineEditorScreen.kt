@@ -22,7 +22,9 @@ import com.example.nameshootingtimer.domain.model.Task
 import com.example.nameshootingtimer.ui.screens.routine.components.DurationPicker
 import com.example.nameshootingtimer.ui.screens.routine.components.PlaybackModeSelector
 import com.example.nameshootingtimer.ui.screens.routine.components.ReorderableTaskColumn
-import com.example.nameshootingtimer.ui.screens.routine.components.SoundSelectorPlaceholder
+import com.example.nameshootingtimer.ui.screens.routine.components.SoundSelector
+import com.example.nameshootingtimer.ui.screens.routine.components.IntegerInput
+import com.example.nameshootingtimer.ui.screens.routine.components.VibrateToggle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -369,7 +371,7 @@ fun EditTaskContent(
                 )
             }
             is Task.BeepTask -> {
-                SoundSelectorPlaceholder(
+                SoundSelector(
                     soundId = t.soundId,
                     onSoundIdChanged = { currentTask = t.copy(soundId = it) }
                 )
@@ -383,7 +385,22 @@ fun EditTaskContent(
                         durationMs = t.durationMs ?: 1000L,
                         onDurationChanged = { currentTask = t.copy(durationMs = it) }
                     )
+                } else if (t.playbackMode == Task.PlaybackMode.REPEAT_COUNT) {
+                    IntegerInput(
+                        label = "Repeat Count",
+                        value = t.repeatCount,
+                        onValueChange = { currentTask = t.copy(repeatCount = it) }
+                    )
                 }
+                DurationPicker(
+                    label = "Gap Between Beeps",
+                    durationMs = t.gapMs,
+                    onDurationChanged = { currentTask = t.copy(gapMs = it) }
+                )
+                VibrateToggle(
+                    vibrate = t.vibrate,
+                    onVibrateChanged = { currentTask = t.copy(vibrate = it) }
+                )
             }
             is Task.VibrateTask -> {
                 PlaybackModeSelector(
@@ -399,7 +416,7 @@ fun EditTaskContent(
                 }
             }
             is Task.PlaySoundTask -> {
-                SoundSelectorPlaceholder(
+                SoundSelector(
                     soundId = t.soundId,
                     onSoundIdChanged = { currentTask = t.copy(soundId = it) }
                 )
@@ -413,7 +430,17 @@ fun EditTaskContent(
                         durationMs = t.durationMs ?: 3000L,
                         onDurationChanged = { currentTask = t.copy(durationMs = it) }
                     )
+                } else if (t.playbackMode == Task.PlaybackMode.REPEAT_COUNT) {
+                    IntegerInput(
+                        label = "Repeat Count",
+                        value = t.repeatCount,
+                        onValueChange = { currentTask = t.copy(repeatCount = it) }
+                    )
                 }
+                VibrateToggle(
+                    vibrate = t.vibrate,
+                    onVibrateChanged = { currentTask = t.copy(vibrate = it) }
+                )
             }
         }
 

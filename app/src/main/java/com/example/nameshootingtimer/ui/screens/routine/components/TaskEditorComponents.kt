@@ -4,11 +4,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.nameshootingtimer.domain.model.Task
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DurationPicker(
     label: String,
@@ -59,20 +61,86 @@ fun PlaybackModeSelector(
                 label = { Text("Manual Stop") },
                 modifier = Modifier.weight(1f)
             )
+            FilterChip(
+                selected = selectedMode == Task.PlaybackMode.REPEAT_COUNT,
+                onClick = { onModeSelected(Task.PlaybackMode.REPEAT_COUNT) },
+                label = { Text("Repeat X") },
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SoundSelector(
+    soundId: String,
+    onSoundIdChanged: (String) -> Unit
+) {
+    val sounds = listOf("default", "bell", "buzzer", "whistle")
+    var expanded by remember { mutableStateOf(false) }
+
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = !expanded }
+    ) {
+        OutlinedTextField(
+            value = soundId,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Sound") },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable)
+        )
+        ExposedDropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            sounds.forEach { sound ->
+                DropdownMenuItem(
+                    text = { Text(sound) },
+                    onClick = {
+                        onSoundIdChanged(sound)
+                        expanded = false
+                    }
+                )
+            }
         }
     }
 }
 
 @Composable
-fun SoundSelectorPlaceholder(
-    soundId: String,
-    onSoundIdChanged: (String) -> Unit
+fun IntegerInput(
+    label: String,
+    value: Int,
+    onValueChange: (Int) -> Unit
 ) {
+    var textValue by remember(value) { mutableStateOf(value.toString()) }
     OutlinedTextField(
-        value = soundId,
-        onValueChange = onSoundIdChanged,
-        label = { Text("Sound ID") },
-        placeholder = { Text("e.g. bell, buzzer") },
+        value = textValue,
+        onValueChange = { newValue ->
+            if (newValue.all { it.isDigit() }) {
+                textValue = newValue
+                newValue.toIntOrNull()?.let { onValueChange(it) }
+            }
+        },
+        label = { Text(label) },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         modifier = Modifier.fillMaxWidth()
     )
+}
+
+@Composable
+fun VibrateToggle(
+    vibrate: Boolean,
+    onVibrateChanged: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text("Vibrate")
+        Switch(checked = vibrate, onCheckedChange = onVibrateChanged)
+    }
 }

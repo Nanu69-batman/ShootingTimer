@@ -14,7 +14,8 @@ sealed class Task {
     @Serializable
     enum class PlaybackMode {
         TIMED,
-        MANUAL_STOP
+        MANUAL_STOP,
+        REPEAT_COUNT
     }
 
     @Serializable
@@ -36,7 +37,10 @@ sealed class Task {
         override val orderIndex: Int,
         val soundId: String,
         val playbackMode: PlaybackMode,
-        val durationMs: Long? = null // Null if MANUAL_STOP
+        val durationMs: Long? = null,
+        val repeatCount: Int = 1,
+        val gapMs: Long = 500,
+        val vibrate: Boolean = false
     ) : Task() {
         override fun withId(newId: String) = copy(id = newId)
     }
@@ -61,7 +65,9 @@ sealed class Task {
         override val orderIndex: Int,
         val soundId: String,
         val playbackMode: PlaybackMode,
-        val durationMs: Long? = null
+        val durationMs: Long? = null,
+        val repeatCount: Int = 1,
+        val vibrate: Boolean = false
     ) : Task() {
         override fun withId(newId: String) = copy(id = newId)
     }
