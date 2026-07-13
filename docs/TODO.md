@@ -87,8 +87,8 @@ Feature specifications belong in PROJECT.md, UX.md, ARCHITECTURE.md, ASSETS.md, 
 ## Execution Modes
 
 - [x] Single Run
-- [ ] Repeat X Times
-- [ ] Infinite Loop
+- [x] Repeat X Times
+- [x] Infinite Loop
 
 ## Manual Stop
 

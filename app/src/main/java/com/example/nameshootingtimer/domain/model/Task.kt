@@ -39,7 +39,6 @@ sealed class Task {
         val playbackMode: PlaybackMode,
         val durationMs: Long? = null,
         val repeatCount: Int = 1,
-        val gapMs: Long = 500,
         val vibrate: Boolean = false
     ) : Task() {
         override fun withId(newId: String) = copy(id = newId)
@@ -52,7 +51,8 @@ sealed class Task {
         override val customName: String = "Vibrate",
         override val orderIndex: Int,
         val playbackMode: PlaybackMode,
-        val durationMs: Long? = null
+        val durationMs: Long? = null,
+        val repeatCount: Int = 1
     ) : Task() {
         override fun withId(newId: String) = copy(id = newId)
     }

@@ -392,11 +392,6 @@ fun EditTaskContent(
                         onValueChange = { currentTask = t.copy(repeatCount = it) }
                     )
                 }
-                DurationPicker(
-                    label = "Gap Between Beeps",
-                    durationMs = t.gapMs,
-                    onDurationChanged = { currentTask = t.copy(gapMs = it) }
-                )
                 VibrateToggle(
                     vibrate = t.vibrate,
                     onVibrateChanged = { currentTask = t.copy(vibrate = it) }
@@ -412,6 +407,12 @@ fun EditTaskContent(
                         label = "Vibration Duration",
                         durationMs = t.durationMs ?: 1000L,
                         onDurationChanged = { currentTask = t.copy(durationMs = it) }
+                    )
+                } else if (t.playbackMode == Task.PlaybackMode.REPEAT_COUNT) {
+                    IntegerInput(
+                        label = "Repeat Count",
+                        value = t.repeatCount,
+                        onValueChange = { currentTask = t.copy(repeatCount = it) }
                     )
                 }
             }

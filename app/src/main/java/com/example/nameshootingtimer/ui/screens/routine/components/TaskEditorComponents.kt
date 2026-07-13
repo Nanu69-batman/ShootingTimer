@@ -77,7 +77,7 @@ fun SoundSelector(
     soundId: String,
     onSoundIdChanged: (String) -> Unit
 ) {
-    val sounds = listOf("default", "bell", "buzzer", "whistle")
+    val sounds = listOf("default", "beep", "notification", "alarm", "ringtone", "bell", "buzzer", "whistle")
     var expanded by remember { mutableStateOf(false) }
 
     ExposedDropdownMenuBox(

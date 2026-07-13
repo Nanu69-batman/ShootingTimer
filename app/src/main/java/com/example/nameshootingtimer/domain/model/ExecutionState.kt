@@ -10,6 +10,7 @@ sealed class ExecutionStatus {
 data class ExecutionState(
     val status: ExecutionStatus = ExecutionStatus.Idle,
     val activeTaskId: String? = null,
+    val activeTaskIndex: Int = -1,
     val activeTaskName: String? = null,
     val remainingTimeMs: Long = 0,
     val currentCycle: Int = 1,

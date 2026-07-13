@@ -73,13 +73,8 @@ class ExecutionEngine @Inject constructor(
         while (infiniteLoop || cycle <= repeatCount) {
             _state.value = _state.value.copy(currentCycle = cycle)
             
-            // If resuming, we might want to pick up from where we left off
-            // For now, let's keep it simple and restart the routine or specific task
-            
-            for (task in routine.tasks) {
-                // Skip if we are resuming and already passed this task (logic TBD)
-                
-                executeTask(task)
+            for ((index, task) in routine.tasks.withIndex()) {
+                executeTask(task, index)
                 
                 if (!coroutineContext.isActive) break
             }
@@ -93,9 +88,10 @@ class ExecutionEngine @Inject constructor(
         }
     }
 
-    private suspend fun executeTask(task: Task) {
+    private suspend fun executeTask(task: Task, index: Int) {
         _state.value = _state.value.copy(
             activeTaskId = task.id,
+            activeTaskIndex = index,
             activeTaskName = task.customName
         )
         
@@ -104,74 +100,84 @@ class ExecutionEngine @Inject constructor(
                 runTimer(task.durationMs)
             }
             is Task.BeepTask -> {
-                if (task.vibrate) vibrationManager.vibrate(100) // Small vibration for each beep start?
-                
                 when (task.playbackMode) {
                     Task.PlaybackMode.TIMED -> {
-                        val duration = task.durationMs ?: 0L
-                        val startTime = System.currentTimeMillis()
-                        while (System.currentTimeMillis() - startTime < duration) {
-                            audioManager.playSound(task.soundId)
-                            if (task.vibrate) vibrationManager.vibrate(100)
-                            delay(task.gapMs)
-                            if (!coroutineContext.isActive) break
-                        }
+                        if (task.vibrate) vibrationManager.vibrate(100)
+                        audioManager.playSound(task.soundId)
+                        runTimer(task.durationMs ?: 0L)
+                        audioManager.stopAll()
                     }
                     Task.PlaybackMode.REPEAT_COUNT -> {
                         repeat(task.repeatCount) {
-                            audioManager.playSound(task.soundId)
                             if (task.vibrate) vibrationManager.vibrate(100)
-                            delay(task.gapMs)
+                            audioManager.playSound(task.soundId)
+                            delay(500) // Standard gap between repeated beeps
                             if (!coroutineContext.isActive) return@repeat
                         }
+                        audioManager.stopAll()
                     }
                     Task.PlaybackMode.MANUAL_STOP -> {
-                        _state.value = _state.value.copy(remainingTimeMs = -1)
+                        _state.value = _state.value.copy(remainingTimeMs = -1L)
                         val job = CoroutineScope(coroutineContext).launch {
                             while (isActive) {
-                                audioManager.playSound(task.soundId)
                                 if (task.vibrate) vibrationManager.vibrate(100)
-                                delay(task.gapMs)
+                                audioManager.playSound(task.soundId)
+                                delay(1000)
                             }
                         }
                         suspendUntilManualStop()
+                        _state.value = _state.value.copy(remainingTimeMs = 0)
                         job.cancel()
                         audioManager.stopAll()
                     }
                 }
             }
             is Task.VibrateTask -> {
-                if (task.playbackMode == Task.PlaybackMode.TIMED) {
-                    vibrationManager.vibrate(task.durationMs ?: 0L)
-                    runTimer(task.durationMs ?: 0L)
-                } else {
-                    _state.value = _state.value.copy(remainingTimeMs = -1)
-                    vibrationManager.startContinuous()
-                    suspendUntilManualStop()
-                    vibrationManager.stop()
-                }
-            }
-            is Task.PlaySoundTask -> {
-                if (task.vibrate) vibrationManager.vibrate(200)
-
                 when (task.playbackMode) {
                     Task.PlaybackMode.TIMED -> {
-                        audioManager.playSound(task.soundId)
+                        vibrationManager.vibrate(task.durationMs ?: 0L)
                         runTimer(task.durationMs ?: 0L)
+                        vibrationManager.stop()
                     }
                     Task.PlaybackMode.REPEAT_COUNT -> {
                         repeat(task.repeatCount) {
-                            audioManager.playSound(task.soundId)
-                            // We need to know the duration of the sound to gap it properly
-                            // For now, let's assume a fixed gap or wait for sound to finish if we had that info
-                            delay(1000) // Placeholder gap
+                            vibrationManager.vibrate(500)
+                            delay(1000) // Gap between vibrations
                             if (!coroutineContext.isActive) return@repeat
                         }
+                        vibrationManager.stop()
                     }
                     Task.PlaybackMode.MANUAL_STOP -> {
-                        _state.value = _state.value.copy(remainingTimeMs = -1)
+                        _state.value = _state.value.copy(remainingTimeMs = -1L)
+                        vibrationManager.startContinuous()
+                        suspendUntilManualStop()
+                        _state.value = _state.value.copy(remainingTimeMs = 0)
+                        vibrationManager.stop()
+                    }
+                }
+            }
+            is Task.PlaySoundTask -> {
+                when (task.playbackMode) {
+                    Task.PlaybackMode.TIMED -> {
+                        if (task.vibrate) vibrationManager.vibrate(200)
+                        audioManager.playSound(task.soundId)
+                        runTimer(task.durationMs ?: 0L)
+                        audioManager.stopAll()
+                    }
+                    Task.PlaybackMode.REPEAT_COUNT -> {
+                        repeat(task.repeatCount) {
+                            if (task.vibrate) vibrationManager.vibrate(200)
+                            audioManager.playSound(task.soundId)
+                            delay(1000) // Gap for sounds
+                            if (!coroutineContext.isActive) return@repeat
+                        }
+                        audioManager.stopAll()
+                    }
+                    Task.PlaybackMode.MANUAL_STOP -> {
+                        _state.value = _state.value.copy(remainingTimeMs = -1L)
                         audioManager.playSound(task.soundId, loop = true)
                         suspendUntilManualStop()
+                        _state.value = _state.value.copy(remainingTimeMs = 0)
                         audioManager.stopAll()
                     }
                 }
